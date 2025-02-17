@@ -58,20 +58,8 @@ dev = [
     "pudb>=2024.1.3",
     "pydantic>=2.10.6",
     "pytype>=2024.10.11",
+    "jupyterlab>=4.3.5",
 ]
-
-[tool.basedpyright]
-typeCheckingMode = "recommended"
-reportMissingTypeStubs = false
-reportUnknownMemberType = false
-reportUnknownVariableType = false
-reportUnknownArgumentType = false
-reportUnannotatedClassAttribute = false
-reportUninitializedInstanceVariable = false
-reportOptionalSubscript = false
-reportExplicitAny = false
-reportAssignmentType = "warning"
-enableExperimentalFeatures = true
 
 [tool.ruff]
 preview = true
