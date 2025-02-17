@@ -50,7 +50,7 @@ def main(cfg: AppConfig):
     y_true = df.select(pl.col("label")).to_numpy().flatten()
     y_probas = df.select(pl.col("score")).to_numpy().flatten()
     frac_pos, pred_values = calibration_curve(y_true, y_probas, n_bins=cfg.n_bins, pos_label=True)
-    data_line = list(zip(frac_pos, pred_values))
+    data_line = list(zip(frac_pos, pred_values, strict=False))
     table_line = wandb.Table(data=data_line, columns=[cfg.x_label, cfg.y_label])
     # hist, edges = np.histogram(y_probas, bins=cfg.n_bins, density=False)
     data_hist = [[h] for h in y_probas]

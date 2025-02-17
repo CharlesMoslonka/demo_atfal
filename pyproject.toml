@@ -18,8 +18,8 @@ dependencies = [
     "jax[cuda12]; platform_system != 'Darwin'",
     "jax; platform_system == 'Darwin'",
     "clu>=0.0.12",
-    "tensorflow-cpu; platform_system != 'Darwin'",
-    "tensorflow; platform_system == 'Darwin'",
+    "tensorflow-cpu<2.18; platform_system != 'Darwin'",
+    "tensorflow<2.18; platform_system == 'Darwin'",
 ]
 
 [project.scripts]
@@ -99,10 +99,20 @@ select = [
     "YTT",
 ]
 
-ignore = ["ISC001"]
+ignore = ["ISC001", "F811"]
 
 [tool.ruff.lint.per-file-ignores]
-"**/scripts/*" = ["INP001", "T201", "PLR0917", "PLR0913", "RUF009", "FBT003"]
+"**/scripts/*" = [
+    "INP001",
+    "T201",
+    "PLR0917",
+    "PLR0913",
+    "RUF009",
+    "FBT003",
+    "E501",
+    "PLR0914",
+    "A004",
+]
 "**/tests/**/*" = ["PLC1901", "PLR2004", "PLR6301", "S", "TID252"]
 "docs/notebooks/**/*" = ["INP001", "T201", "A004", "E501"]
 

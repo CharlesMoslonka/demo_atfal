@@ -15,10 +15,10 @@
 # ///
 
 import dataclasses
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from enum import auto
 from functools import partial
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
 import numpy as np
 import orjson as json
@@ -76,7 +76,7 @@ def process_logprobs(logprobs: Sequence[Sequence[float]], max_len: int) -> Logpr
 
 
 @overload
-def score_fn(method: ScoringMethod, logprobs: Any):
+def score_fn(method: ScoringMethod, logprobs: Any):  # noqa: ARG001
     probs = np.exp(logprobs)
     scores = reduce(probs, "batch max_len -> batch", "mean")
     return scores
@@ -92,7 +92,7 @@ def score_fn(
     probs = np.exp(logprobs)
     scores = reduce(probs, "n_samples max_len -> n_samples", "mean")
     scores = rearrange(scores, "(n_samples dim) -> n_samples dim", dim=1)
-    ids_train, ids_test, scores_train, scores_test, labels_train, labels_test = train_test_split(
+    _, ids_test, scores_train, scores_test, labels_train, labels_test = train_test_split(
         ids, scores, labels, test_size=0.8, random_state=42
     )
     if method is ScoringMethod.SUPERVSED_ISOTONIC:
@@ -121,10 +121,13 @@ def read_file(path: epath.Path) -> list[dict[str, Any]]:
         return list(samples)
 
 
+DEFAULT_GET_ID = tlz.curried.get("id")
+
+
 def join_samples(
     ratings: Sequence[dict[str, Any]],
     responses: Sequence[dict[str, Any]],
-    key_fn: Callable[[dict[str, str]], str] = tlz.curried.get("id"),
+    key_fn: Callable[[dict[str, str]], str] = DEFAULT_GET_ID,
 ):
     joined = tlz.join(key_fn, responses, key_fn, ratings)
     return [{"id": left["id"], **left, **right} for left, right in joined]
@@ -142,7 +145,7 @@ def main(cfg: AppConfig):
     with output_file.open("w") as dst:
         rating_samples = tlz.pipe(cfg.ratings_file, read_file, tlz.curried.filter(lambda d: d["rating"] is not None))
         samples = join_samples(rating_samples, samples)
-        ids, logprobs = zip(*tlz.pluck(["id", "logprobs"], samples))
+        ids, logprobs = zip(*tlz.pluck(["id", "logprobs"], samples), strict=False)
         ids = np.array(list(map(int, ids)), dtype=int)
 
         ratings = tlz.pipe(samples, tlz.curried.pluck("rating"), tlz.curried.map(tlz.compose_left(float, int)))

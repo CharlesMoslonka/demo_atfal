@@ -20,8 +20,9 @@
 
 import abc
 import dataclasses
+from collections.abc import Callable, Sequence
 from itertools import chain
-from typing import Any, Callable, Sequence
+from typing import Any
 
 import polars as pl
 import toolz as tlz
@@ -30,6 +31,7 @@ from beartype import beartype
 from datasets import Dataset, load_dataset
 from etils import eapp, edc, epath, etqdm
 from simple_parsing import Serializable, field, subgroups
+from typing_extensions import override
 from vllm import LLM, SamplingParams
 from vllm.sampling_params import RequestOutputKind
 from vllm.sequence import Logprob
@@ -95,6 +97,7 @@ class NaturalQADatasetConfig(DatasetConfig):
         default_factory=lambda: TrainSplitDatasetConfig(path="google-research-datasets/natural_questions")
     )
 
+    @override
     def sample_fn(self, sample: dict[str, Any]) -> dict[str, Any]:
         question = tlz.get_in(["question", "text"], sample, no_default=True)
         short_answers = tlz.get_in(["annotations", "short_answers"], sample, no_default=True)
@@ -193,7 +196,7 @@ def make_dataset(
 
 @beartype
 def extract_logprobs(logprobs: Sequence[dict[int, Logprob]]) -> tuple[Sequence[int], Sequence[float]]:
-    tokens, lps = zip(*chain.from_iterable([lp.items() for lp in logprobs]))
+    tokens, lps = zip(*chain.from_iterable([lp.items() for lp in logprobs]), strict=False)
     return (tokens, tuple(lp.logprob for lp in lps))
 
 
@@ -213,8 +216,10 @@ def main(cfg: AppConfig):
     with output_file.open("a") as dst:
         for batch in etqdm.tqdm(ds):
             requests = llm.generate(batch["question"], sampling_params)
-            responses, logprobs = zip(*((req.outputs[0].text, req.outputs[0].logprobs) for req in requests))
-            tokens, processed = zip(*map(extract_logprobs, logprobs))
+            responses, logprobs = zip(
+                *((req.outputs[0].text, req.outputs[0].logprobs) for req in requests), strict=False
+            )
+            tokens, processed = zip(*map(extract_logprobs, logprobs), strict=False)
             sample = {
                 "id": batch["id"],
                 "response": responses,
