@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-
+#
 # dependencies = [
 #     "einops",
 #     "etils[eapp,edc,epath]",
@@ -13,11 +13,6 @@
 #     "toolz",
 # ]
 # ///
-"""
-Compute the score from a list of response provided by a llm
-
-Must output id, scores
-"""
 
 import dataclasses
 from collections.abc import Sequence
@@ -138,10 +133,13 @@ def join_samples(
 def main(cfg: AppConfig):
     logging.info("\n%s", cfg)
 
-    output_files = cfg.output_dir / f"scores_{cfg.method}_{cfg.responses_file}".replace("/", "_")
+    output_file = cfg.output_dir / f"scores_{cfg.method}_{cfg.responses_file}".replace("/", "_")
+    if output_file.exists():
+        msg = f"File {output_file} already exists"
+        raise FileExistsError(msg)
     samples = read_file(cfg.responses_file)
 
-    with output_files.open("w") as dst:
+    with output_file.open("w") as dst:
         rating_samples = tlz.pipe(cfg.ratings_file, read_file, tlz.curried.filter(lambda d: d["rating"] is not None))
         samples = join_samples(rating_samples, samples)
         ids, logprobs = zip(*tlz.pluck(["id", "logprobs"], samples))
@@ -166,7 +164,7 @@ def main(cfg: AppConfig):
             raise ValueError(msg)
         df = pl.DataFrame({"id": ids, "score": scores, "label": labels})
         df.write_ndjson(dst)
-    logging.info("Wrote scores into %s", output_files)
+    logging.info("Wrote scores into %s", output_file)
 
 
 if __name__ == "__main__":
