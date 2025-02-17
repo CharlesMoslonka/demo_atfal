@@ -17,6 +17,7 @@
 #     "tensorflow-datasets",
 #     "orjson",
 #     "outlines[vllm]",
+#     "pydantic",
 # ]
 # ///
 
@@ -32,6 +33,7 @@ from beartype import beartype
 from etils import eapp, edc, epath, etqdm
 from jinja2 import Environment
 from outlines import generate, models
+from pydantic import BaseModel, Field, ValidationError, conint
 from simple_parsing import field, subgroups
 from vllm import LLM, SamplingParams
 from vllm.sampling_params import RequestOutputKind
@@ -115,12 +117,9 @@ RATING_PATTERN = re.compile(r"<rating>(.*?)</rating>")
 EXPLANATION_PATTERN = re.compile(r"<explanation>(.*?)</explanation>")
 
 
-def extract_rating_and_explanation(text):
-    rating_match = re.search(RATING_PATTERN, text)
-    explanation_match = re.search(EXPLANATION_PATTERN, text)
-    rating = rating_match.group(1) if rating_match else None
-    explanation = explanation_match.group(1) if explanation_match else None
-    return rating, explanation
+class Response(BaseModel):
+    explanation: str
+    rating: int
 
 
 def main(cfg: AppConfig):
@@ -155,7 +154,7 @@ def main(cfg: AppConfig):
 
     <think>\n""")
 
-    generator = generate.text(model)
+    generator = generate.json(model, Response)
 
     output_file = cfg.source.parent / f"ratings_{cfg.model.model}_{cfg.source.name}".replace("/", "_")
     if output_file.exists():
@@ -185,9 +184,13 @@ def main(cfg: AppConfig):
                     prompt.render(question=question, golden_answer=golden_answer, generated_answer=generated_answer)
                     for question, golden_answer, generated_answer in zip(questions, answers, responses)
                 ]
-                requests = generator(prompts, sampling_params=sampling_params)
-                ratings, explanations = zip(*(map(extract_rating_and_explanation, requests)))
-                # TODO: Add score computation here
+                try:
+                    requests = generator(prompts, sampling_params=sampling_params)
+                except ValidationError as e:
+                    msg = "Error validating generated output"
+                    logging.exception(msg)
+                    continue
+                ratings, explanations = zip(*((req.rating, req.explanation) for req in requests))
                 samples = {"id": ids, "rating": ratings, "explanation": explanations}
                 df = pl.DataFrame(samples)
                 df.write_ndjson(dst)
