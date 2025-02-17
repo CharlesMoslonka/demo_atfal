@@ -90,7 +90,7 @@ class ModelConfig:
     max_seq_len_to_capture: int = 8192
     disable_custom_all_reduce: bool = False
     disable_async_output_proc: bool = False
-    max_model_len: int = 1024
+    max_model_len: int = 8192
 
 
 @edc.dataclass
@@ -136,19 +136,18 @@ def main(cfg: AppConfig):
         raise FileExistsError(msg)
 
     env = Environment(autoescape=True)
-    prompt = env.from_string("""You will be given a question, a golden_answer and a generated_answer to evaluate.
-    Your task will be to evaluate if the generated_answer provide a correct answer to the question.
-    The generated_answer must be consistent with the golden_answer.
-    You must grade the correctnees of the generated_answer on an interger scale from 0 to 5.
-    0 means the generated_answer is not related to the golden_answer, and 5 means the generated_answer is exactly similar to the golden_answer.
-    You also must provide a short explanation of your rating.
-    Enclose your rating into <rating>your rating</rating> tags.
-    Enclose your explanation into <explanation>your explanation</explanation> tags.
-
+    prompt = env.from_string("""You will be given a question, a golden_answer and a generated_answer to read and understand.
+    Your task is to evaluate how similar the generated_answer and the golden_answer are.
+    You must analyze each element of the golden_answer and rates if the generated_answer provides the same elements.
+    Answers are similar if the dates, the names, the location, the facts etc. are exactly the same between the answers.
+    You must grade how similar the generated_answer is to the golden_answer on an integer scale from 0 to 5.
+    0 means the generated_answer are differents the golden_answer, and 5 means the generated_answer and the golden_answer provides the same answer to the question.
+    To help you in your task, you must know the golden_answer is the true reponse to the question and the generated_answer is a candidate answer to the question.
+    You must first provide a short reasoning about your rating then rate the similarity between the golden_answer and the generated_answer.
 
     Here the question, golden_answer and the generated_answer.
 
-    <question>{{ question }}</questions>
+    <question>{{ question }}</question>
     <golden_answer>{{ golden_answer }}</golden_answer>
     <generated_answer>{{ generated_answer }}</generated_answer>
 
