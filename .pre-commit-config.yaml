@@ -1,0 +1,56 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-added-large-files
+    -   id: check-merge-conflict
+    -   id: debug-statements
+    -   id: no-commit-to-branch
+        args: [--branch, main]
+    -   id: mixed-line-ending
+
+-  repo: https://github.com/mwouts/jupytext
+   rev: v1.16.6
+   hooks:
+   - id: jupytext
+     args: [--sync, pipe]
+-  repo: https://github.com/astral-sh/ruff-pre-commit
+   rev: v0.9.2
+   hooks:
+   -   id: ruff
+   -   id: ruff-format
+- repo: https://github.com/astral-sh/uv-pre-commit
+  rev: 0.5.20
+  hooks:
+    - id: pip-compile
+      args: [--output-file, requirements.txt, pyproject.toml]
+      files: ^pyproject.toml$
+    - id: pip-compile
+      args: [--extra, docs, --output-file, docs/requirements.txt, pyproject.toml]
+      files: ^pyproject.toml$
+-  repo: https://github.com/asottile/pyupgrade
+   rev: v3.19.1
+   hooks:
+   -   id: pyupgrade
+       args: [--py310-plus]
+- repo: https://github.com/compilerla/conventional-pre-commit
+  rev: v4.0.0
+  hooks:
+    - id: conventional-pre-commit
+      stages: [commit-msg]
+      args: [--verbose, feat, fix, chore, test]
+- repo: https://github.com/nbQA-dev/nbQA
+  rev: 1.9.1
+  hooks:
+    - id: nbqa-pyupgrade
+      args: [--py310-plus]
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.3.0
+  hooks:
+    - id: codespell
+      files: \.(py|md)$
