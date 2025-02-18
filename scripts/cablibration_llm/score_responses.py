@@ -84,7 +84,7 @@ def score_fn(method: ScoringMethod, logprobs: Any):  # noqa: ARG001
 
 @overload
 def score_fn(
-    method: Literal[ScoringMethod.SUPERVISED_ISOTONIC, ScoringMethod.SUPERVISED_ISOTONIC],
+    method: Literal[ScoringMethod.SUPERVISED_ISOTONIC, ScoringMethod.SUPERVISED_SIGMOID],
     logprobs: Any,
     ids: Any,
     labels: Any,
@@ -95,9 +95,9 @@ def score_fn(
     _, ids_test, scores_train, scores_test, labels_train, labels_test = train_test_split(
         ids, scores, labels, test_size=0.8, random_state=42
     )
-    if method is ScoringMethod.SUPERVSED_ISOTONIC:
+    if method is ScoringMethod.SUPERVISED_ISOTONIC:
         calibration_method = "isotonic"
-    elif method is ScoringMethod.SUPERVSED_SIGMOID:
+    elif method is ScoringMethod.SUPERVISED_SIGMOID:
         calibration_method = "sigmoid"
     else:
         msg = f"method {method} is not recognized"
@@ -136,36 +136,39 @@ def join_samples(
 def main(cfg: AppConfig):
     logging.info("\n%s", cfg)
 
-    output_file = cfg.output_dir / f"scores_{cfg.method}_{cfg.responses_file}".replace("/", "_")
+    output_file = (
+        cfg.output_dir / f"scores_{cfg.method}_{cfg.responses_file.name}_{cfg.ratings_file.name}.json".replace("/", "_")
+    )
     if output_file.exists():
         msg = f"File {output_file} already exists"
         raise FileExistsError(msg)
     samples = read_file(cfg.responses_file)
 
+    rating_samples = tlz.pipe(cfg.ratings_file, read_file, tlz.curried.filter(lambda d: d["rating"] is not None))
+    samples = join_samples(rating_samples, samples)
+    ids, logprobs = zip(*tlz.pluck(["id", "logprobs"], samples), strict=False)
+    ids = np.array(list(map(int, ids)), dtype=int)
+
+    ratings = tlz.pipe(samples, tlz.curried.pluck("rating"), tlz.curried.map(tlz.compose_left(float, int)))
+
+    labels = tlz.pipe(
+        ratings,
+        tlz.curried.map(lambda rating: rating >= cfg.threshold),
+        list,
+        partial(np.array, dtype=int),
+    )
+    logprobs = process_logprobs(logprobs, max_len=cfg.max_length)
+
+    if cfg.method in ScoringMethod.supervised():
+        ids, scores, labels = score_fn(cfg.method, logprobs, ids, labels)
+    elif cfg.method in ScoringMethod.unsupervised():
+        scores = score_fn(cfg.method, logprobs)
+    else:
+        msg = "wrong method"
+        raise ValueError(msg)
+    df = pl.DataFrame({"id": ids, "score": scores, "label": labels})
+
     with output_file.open("w") as dst:
-        rating_samples = tlz.pipe(cfg.ratings_file, read_file, tlz.curried.filter(lambda d: d["rating"] is not None))
-        samples = join_samples(rating_samples, samples)
-        ids, logprobs = zip(*tlz.pluck(["id", "logprobs"], samples), strict=False)
-        ids = np.array(list(map(int, ids)), dtype=int)
-
-        ratings = tlz.pipe(samples, tlz.curried.pluck("rating"), tlz.curried.map(tlz.compose_left(float, int)))
-
-        labels = tlz.pipe(
-            ratings,
-            tlz.curried.map(lambda rating: rating >= cfg.threshold),
-            list,
-            partial(np.array, dtype=int),
-        )
-        logprobs = process_logprobs(logprobs, max_len=cfg.max_length)
-
-        if cfg.method in ScoringMethod.supervised():
-            ids, scores, labels = score_fn(cfg.method, logprobs, ids, labels)
-        elif cfg.method in ScoringMethod.unsupervised():
-            scores = score_fn(cfg.method, logprobs)
-        else:
-            msg = "wrong method"
-            raise ValueError(msg)
-        df = pl.DataFrame({"id": ids, "score": scores, "label": labels})
         df.write_ndjson(dst)
     logging.info("Wrote scores into %s", output_file)
 
