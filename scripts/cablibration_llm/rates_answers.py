@@ -99,100 +99,55 @@ class MistralModelConfig(ModelConfig):
     load_format: str = "mistral"
 
 
-# TODO: Ratings perf are still bad. Need to find a better prompt
-DEFAULT_PROMPT = """
-You are tasked with evaluating the correctness of a generated answer with respect to a golden answer.
-Here are some rules of the evaluation:
-You must read and understand the question being asked.
-Your reply should strictly describe how similar the generated answer is to the golden answer.
-If the Generated Answer contradicts any key fact in the Golden Answer, consider it a major error.
-If the Generated Answer only differs slightly in wording or includes minor omissions but preserves correctness, \
-        consider it a minor error.
-If the Generated Answer is completely aligned with the Golden Answer, it should receive the highest score.
-Assign a rating on a scale of 0 to 5:
-- 0: Completely incorrect or irrelevant.
-- 1: Mostly incorrect, with only slight correct elements.
-- 2: Partially correct but contains major omissions or errors.
-- 3: Mostly correct with some errors or missing details.
-- 4: Correct with only minor issues or omissions.
-- 5: Perfectly correct and fully consistent with the Golden Answer.
+@edc.dataclass
+@dataclasses.dataclass
+class LLamaModelConfig(ModelConfig):
+    model: str = "neuralmagic/Meta-Llama-3.1-70B-Instruct-FP8"
+    tensor_parallel_size: int = 2
 
-Question:
-{{ question }}
+
+DEFAULT_PROMPT = """
+You are tasked with evaluating how closely a generated answer matches the provided golden answer:
+
+1. Evaluate Core Factual Content Only:
+- Focus solely on comparing the core factual content of the generated answer against the golden answer.
+- Key facts (dates, names, numbers, relationships, etc.) must exactly match the golden answer. Any deviation in these critical details is unacceptable.
+- Extra explanatory details are acceptable only if they do not contradict or obscure the core answer.
+
+2. Identify and Classify Errors:
+    - Major Error:
+        - Occurs when the generated answer contradicts any key fact or core detail of the golden answer (e.g., an incorrect date, name, number, or relationship).
+        - Occurs when the generated answer fails to provide the required core answer—such as asking questions or offering irrelevant commentary—instead of stating the answer.
+    - Minor Error:
+        - Occurs when the generated answer has slight wording differences, includes extra correct details, or omits non-critical elements without changing the overall correctness.
+        - Minor formatting or stylistic differences (e.g., punctuation or extra adjectives) that do not alter meaning should be ignored.
+
+3. Specific Considerations:
+    - Numeric and Date Accuracy: Any numerical values or dates must match exactly. Even a one-year or several-day discrepancy is a major error.
+    - Entity and Name Precision: All key names or entities provided in the golden answer must appear correctly in the generated answer. Substituting or omitting a key entity is a major error.
+    - Irrelevant Content: If the generated answer includes unrelated content (e.g., asking for more details or providing instructions on contacting someone) rather than delivering the required answer, this is a major error.
+
+4. Scoring Guidelines:
+    - Assign a similarity rating on a scale from 0 to 5:
+        - 0: Completely dissimilar to the golden answer.
+        - 1: Mostly dissimilar, with only minimal overlapping elements.
+        - 2: Partially similar but with significant discrepancies.
+        - 3: Mostly similar, with some noticeable discrepancies.
+        - 4: Similar with only minor issues or omissions.
+        - 5: Perfectly similar and fully consistent with the golden answer.
+
+5. Provide a Clear, Concise Explanation:
+    - Detail the specific similarities and discrepancies between the generated answer and the golden answer.
+    - Clearly indicate any major or minor errors (e.g., incorrect dates, names, numbers, or inclusion of irrelevant content).
+    - Keep your explanation focused solely on the factual similarity between the generated answer and the golden answer.
+
+Your evaluation must be objective, detailed, and exclusively focused on ensuring that all key details in the generated answer exactly match those in the golden answer while dismissing any non-essential or unrelated information.
 
 Golden Answer:
 {{ golden_answer }}
 
-Generated AnsWer
+Generated Answer:
 {{ generated_answer }}
-"""
-
-# DEFAULT_PROMPT = """You are an impartial and strict evaluator. \
-#        You must compare the "Generated Answer" to the "Golden Answer" for the given "Question" \
-# and decide how closely the Generated Answer matches it in terms of correctness and completeness.
-#
-# Evaluation Rules:
-# (1) Read the Question to understand what is being asked.
-# (2) Review the Golden Answer. Assume it is correct and factual and use it as your reference point.
-# (3) Compare the Generated Answer to the Golden Answer:
-#    - If the Generated Answer contradicts any key fact in the Golden Answer, consider it a major error.
-#    - If the Generated Answer only differs slightly in wording or includes minor omissions but preserves correctness, \
-#        consider it a minor error.
-#    - If the Generated Answer is completely aligned with the Golden Answer, it should receive the highest score.
-# (4) Assign a rating on a scale of 0 to 5:
-#    - 0: Completely incorrect or irrelevant.
-#    - 1: Mostly incorrect, with only slight correct elements.
-#    - 2: Partially correct but contains major omissions or errors.
-#    - 3: Mostly correct with some errors or missing details.
-#    - 4: Correct with only minor issues or omissions.
-#    - 5: Perfectly correct and fully consistent with the Golden Answer.
-# (5) Provide a concise explanation (1-3 sentences) describing your reasoning. Reference any critical discrepancies or confirmations with the Golden Answer.
-#
-# Question:
-# {{ question }}
-#
-# Golden Answer:
-# {{ golden_answer }}
-#
-# Generated AnsWer
-# {{ generated_answer }}
-#
-# Rating:
-# """
-DEFAULT_PROMPT = """You are an impartial and strict evaluator. Your goal is to compare the "Generated Answer" to the authoritative "Golden Answer" for a given question and decide how closely the Generated Answer matches it in terms of correctness and completeness.
-
-**Instructions**:
-
-1. **Read the Question** carefully to understand the context.
-
-2. **Review the Golden Answer**. This is the official, correct answer. Assume it is factually accurate and use it as your reference point.
-
-3. **Examine the Generated Answer**. Identify whether it:
-   - Matches the main facts stated in the Golden Answer (dates, names, definitions, etc.).
-   - Conflicts with or omits crucial information from the Golden Answer.
-   - Adds any relevant or irrelevant details.
-
-4. **Compare for factual alignment**:
-   - If the Generated Answer contradicts any key fact in the Golden Answer, consider it a major error.
-   - If the Generated Answer only differs slightly in wording or includes minor omissions but preserves correctness, consider it a minor error.
-   - If the Generated Answer is completely aligned with the Golden Answer, it should receive the highest score.
-
-5. **Assign a rating (0 to 5)** using these criteria:
-   - **0**: Completely incorrect or unrelated to the question.
-   - **1**: Mostly incorrect, with minimal correct information or heavy factual conflicts.
-   - **2**: Partially correct but missing significant details or containing major errors.
-   - **3**: Mostly correct but with notable errors or omissions.
-   - **4**: Correct with only minor factual discrepancies or omissions.
-   - **5**: Perfectly correct, with no factual differences from the Golden Answer.
-
-6. **Explain your reasoning** concisely:
-   - Specify key points of agreement or disagreement.
-   - Reference the Golden Answer facts when pointing out errors or accuracies.
----
-<question>{{ question }}</question>
-<golden_answer>{{ golden_answer }}</golden_answer>
-<generated_answer>{{ generated_answer }}</generated_answer>
-<think>
 """
 
 
@@ -217,7 +172,14 @@ class PromptConfig:
 @dataclasses.dataclass
 class AppConfig:
     source: epath.Path
-    model: ModelConfig = subgroups({"default": ModelConfig, "mistral": MistralModelConfig}, default="default")
+    model: ModelConfig = subgroups(
+        {
+            "default": ModelConfig,
+            "mistral": MistralModelConfig,
+            "llama-3.1-70b": LLamaModelConfig,
+        },
+        default="default",
+    )
     prompt: PromptConfig = edc.field(default_factory=PromptConfig)
     output_dir: epath.Path = edc.field(validate=epath.Path, default="outputs")
     sampling_params: SamplingConfig = field(default_factory=SamplingConfig)
