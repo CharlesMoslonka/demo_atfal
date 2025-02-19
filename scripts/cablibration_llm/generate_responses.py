@@ -28,13 +28,15 @@ import polars as pl
 import toolz as tlz
 from absl import app, logging
 from beartype import beartype
-from datasets import Dataset, load_dataset
+from datasets import Dataset, DatasetDict, IterableDataset, IterableDatasetDict, load_dataset
 from etils import eapp, edc, epath, etqdm
 from simple_parsing import Serializable, field, subgroups
 from typing_extensions import override
 from vllm import LLM, SamplingParams
 from vllm.sampling_params import RequestOutputKind
 from vllm.sequence import Logprob
+
+HFDataset = DatasetDict | Dataset | IterableDataset | IterableDatasetDict
 
 
 @dataclasses.dataclass
@@ -185,7 +187,7 @@ class AppConfig:
 @beartype
 def make_dataset(
     config: SplitDatasetConfig, sample_fn: Callable[[dict[str, Any]], dict[str, Any]], num_proc: int | None
-) -> Dataset:
+) -> HFDataset:
     ds = load_dataset(config.path, split=config.split)
     ds = ds.map(sample_fn, num_proc=num_proc)
     ds = ds.filter(lambda x: x["answer"] is not None, num_proc=num_proc)
