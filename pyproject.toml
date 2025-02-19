@@ -130,12 +130,11 @@ mark-parentheses = false
 cell_markers = '"""'
 
 [tool.pytype]
-
 # Space-separated list of files or directories to exclude.
-exclude = ['**/*_test.py', '**/test_*.py']
+exclude = ["**/*_test.py", "**/test_*.py"]
 
 # Space-separated list of files or directories to process.
-inputs = ['.']
+inputs = ["."]
 
 # Keep going past errors to analyze as many files as possible.
 keep_going = false
@@ -145,29 +144,20 @@ keep_going = false
 jobs = 4
 
 # All pytype output goes here.
-output = '.pytype'
+output = ".pytype"
 
-# Platform (e.g., "linux", "win32") that the target code runs on.
-platform = 'linux'
-
-# Paths to source code directories, separated by ':'.
-pythonpath = '.'
-
-# Python version (major.minor) of the target code.
-python_version = '3.11'
-
-# Enable parameter count checks for overriding methods. This flag is temporary
+# Bind 'self' in methods with non-transparent decorators. This flag is temporary
 # and will be removed once this behavior is enabled by default.
-overriding_parameter_count_checks = false
+bind_decorated_methods = false
+
+# Don't allow None to match bool. This flag is temporary and will be removed
+# once this behavior is enabled by default.
+none_is_not_bool = true
 
 # Enable parameter count checks for overriding methods with renamed arguments.
 # This flag is temporary and will be removed once this behavior is enabled by
 # default.
 overriding_renamed_parameter_count_checks = false
-
-# Use the enum overlay for more precise enum checking. This flag is temporary
-# and will be removed once this behavior is enabled by default.
-use_enum_overlay = true
 
 # Variables initialized as None retain their None binding. This flag is
 # temporary and will be removed once this behavior is enabled by default.
@@ -178,16 +168,17 @@ strict_none_binding = false
 use_fiddle_overlay = false
 
 # Opt-in: Do not allow Any as a return type.
-no_return_any = true
+no_return_any = false
 
-# Experimental: Support pyglib's @cached.property.
-enable_cached_property = false
+# Opt-in: Require decoration with @typing.override when overriding a method or
+# nested class attribute of a parent class.
+require_override_decorator = true
 
 # Experimental: Infer precise return types even for invalid function calls.
 precise_return = true
 
 # Experimental: Solve unknown types to label with structural types.
-protocols = true
+protocols = false
 
 # Experimental: Only load submodules that are explicitly imported.
 strict_import = true
@@ -202,8 +193,11 @@ strict_primitive_comparisons = true
 # Experimental: Check that variables are defined in all possible code paths.
 strict_undefined_checks = true
 
+# Experimental: FOR TESTING ONLY. Use pytype/rewrite/.
+use_rewrite = false
+
 # Space-separated list of error names to ignore.
-disable = ['pyi-error']
+disable = ["pyi-error", "import-error"]
 
 # Don't report errors.
 report_errors = true
