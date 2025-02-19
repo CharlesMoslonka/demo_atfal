@@ -16,7 +16,7 @@
 
 import dataclasses
 from collections.abc import Callable, Sequence
-from enum import auto
+from enum import StrEnum, auto
 from functools import partial
 from typing import Any, Literal
 
@@ -28,7 +28,6 @@ from absl import app, logging
 from beartype import beartype
 from einops import rearrange, reduce
 from etils import eapp, edc, epath
-from etils.epy import StrEnum
 from numpy.typing import NDArray
 from plum import dispatch, overload
 from sklearn.calibration import CalibratedClassifierCV
@@ -84,7 +83,7 @@ def score_fn(method: ScoringMethod, logprobs: Any):  # noqa: ARG001
 
 @overload
 def score_fn(
-    method: Literal[ScoringMethod.SUPERVISED_ISOTONIC, ScoringMethod.SUPERVISED_SIGMOID],
+    method: Literal["SUPERVISED_ISOTONIC", "SUPERVISED_SIGMOID"],
     logprobs: Any,
     ids: Any,
     labels: Any,
