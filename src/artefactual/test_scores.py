@@ -1,10 +1,9 @@
-from typing import override
-
 from absl.testing import absltest
 from einops import rearrange
 from keras import ops
 from keras.src import testing
 from keras_hub import models
+from typing_extensions import override
 
 
 class ScoreLogits(testing.TestCase):
