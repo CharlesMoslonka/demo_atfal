@@ -1,22 +1,8 @@
-"""Configuration module for artefactual."""
+"""Configuration module for artefactual.
 
-from artefactual.config.dataset import (
-    DatasetConfig,
-    SplitDatasetConfig,
-    TestSplitDatasetConfig,
-    TrainSplitDatasetConfig,
-    ValSplitDatasetConfig,
-)
-from artefactual.config.model import ModelConfig
-from artefactual.config.sampling import MultipleGenerationConfig, SamplingConfig
+This module provides base abstractions for configuration,
+but specific configurations have been moved to the scripts
+that use them for better modularity.
+"""
 
-__all__ = [
-    "DatasetConfig",
-    "ModelConfig",
-    "MultipleGenerationConfig",
-    "SamplingConfig",
-    "SplitDatasetConfig",
-    "TestSplitDatasetConfig",
-    "TrainSplitDatasetConfig",
-    "ValSplitDatasetConfig",
-]
+__all__ = []
