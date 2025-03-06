@@ -75,15 +75,12 @@ def main(cfg: AppConfig):
 
     logprobs = process_logprobs(logprobs, max_len=cfg.max_length)
 
-    if cfg.method in ScoringMethod.supervised():
+    if labels is not None:
         ids, scores, labels = score_fn(cfg.method, logprobs, ids, labels)
         df = pl.DataFrame({"id": ids, "score": scores, "label": labels})
-    elif cfg.method in ScoringMethod.unsupervised():
+    else:
         scores = score_fn(cfg.method, logprobs)
         df = pl.DataFrame({"id": ids, "score": scores})
-    else:
-        msg = "wrong method"
-        raise ValueError(msg)
 
     with output_file.open("w") as dst:
         df.write_ndjson(dst)

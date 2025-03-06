@@ -40,6 +40,8 @@ from vllm.sampling_params import RequestOutputKind  # pytype: disable=import-err
 @edc.dataclass
 @dataclasses.dataclass
 class SamplingConfig:
+    """Configuration for sampling parameters in text generation."""
+
     n: int = 1
     best_of: int | None = None
     presence_penalty: float = 0.0
@@ -68,6 +70,8 @@ class SamplingConfig:
 @edc.dataclass
 @dataclasses.dataclass
 class ModelConfig:
+    """Configuration for a language model."""
+
     model: str
     task: str = "generate"
     tokenizer: str | None = None
