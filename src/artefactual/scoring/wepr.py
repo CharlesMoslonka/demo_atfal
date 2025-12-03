@@ -5,6 +5,7 @@ from beartype import beartype
 from numpy.typing import NDArray
 
 from artefactual.data.data_model import Completion
+from artefactual.features.entropy_contributions import compute_entropy_contributions
 from artefactual.scoring.uncertainty_detector import UncertaintyDetector
 from artefactual.utils.weights import load_weights
 
@@ -79,7 +80,7 @@ class WEPR(UncertaintyDetector):
 
             # Compute entropy contributions in a vectorized manner
             # Input shape: (num_tokens, K)
-            s_kj = self._entropy_contributions(logprobs_list)
+            s_kj = compute_entropy_contributions(logprobs_list, self.k)
 
             # Token-level WEPR (S_beta): weighted sum across K using mean_weights + intercept
             # Eq (7): S_beta = beta_0 + sum(beta_k * s_kj)
